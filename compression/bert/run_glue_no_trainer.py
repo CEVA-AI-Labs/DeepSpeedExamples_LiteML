@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Finetuning a 🤗 Transformers model for sequence classification on GLUE."""
+import sys
+sys.path.append("/home/olyas/ailabs_litespeed/")
+sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_liteml/")
+sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_shared/")
+sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_qat/")
+sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_pruning/")
+sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_quantization/")
 import argparse
 import logging
 import math
@@ -54,6 +61,8 @@ from util import *
 logger = logging.getLogger(__name__)
 
 require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/text-classification/requirements.txt")
+
+from liteml.retrainer import RetrainerModel, RetrainerConfig
 
 task_to_keys = {
     "cola": ("sentence", None),
@@ -156,7 +165,9 @@ def parse_args():
 
     #############deepspeed, compression, and knowledage distillation#########
     parser.add_argument("--deepspeed", action="store_true", help="use deepspeed or not")
-    parser.add_argument("--deepspeed_config", type=str, default=None, help="deepspeed config")   
+    parser.add_argument("--liteml", action="store_true", help="use liteml or not")
+    parser.add_argument("--deepspeed_config", type=str, default=None, help="deepspeed config")
+    parser.add_argument("--liteml_config", type=str, default=None, help="liteml config")
     parser.add_argument("--save_best_model", action="store_true",  help="save best checkpoint model")
     parser.add_argument("--clean_best_model", action="store_true", help="clean the  model")
     parser.add_argument("--distill_method", type=str, default=None, help="knowledage distillation")   
@@ -295,7 +306,7 @@ def main():
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     config = AutoConfig.from_pretrained(args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
-    if layer_reduction_enabled:
+    if not args.liteml and layer_reduction_enabled:
         config.num_hidden_layers = ds_config["compression_training"][ "layer_reduction"]["keep_number_layer"]  #<==========================================here we assume there is an "num_hidden_layers" argument
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer)
@@ -324,9 +335,13 @@ def main():
             teacher_model.load_state_dict(
                 torch.load(args.pretrained_dir_teacher))
     # model inititalization, config,
-    if args.deepspeed:
+    if args.deepspeed and not args.liteml:
         if quantization_enabled or prune_enabled or layer_reduction_enabled:
             model = init_compression(model, args.deepspeed_config, teacher_model=teacher_model)  #<==========================================compression argument
+
+    if args.liteml:
+        rtrnrCfg = RetrainerConfig(args.liteml_config)
+        model = RetrainerModel(model, rtrnrCfg)
 
     if args.pretrained_dir_student is not None:
             model.load_state_dict(torch.load(args.pretrained_dir_student))  #<==========================================add weight to students if users provides difference models
@@ -463,13 +478,16 @@ def main():
         num_warmup_steps=num_warmup_steps,
         num_training_steps=args.max_train_steps,
     )
+    deepspeed.init_distributed( distributed_port=29501)
     # Prepare the model first 
     model, optimizer, _, lr_scheduler = deepspeed.initialize(
         args=args,
         model=model,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
-        dist_init_required=True)
+        dist_init_required=False)
+
+
 
     if teacher_model is not None:
         teacher_model, _, _, _ = deepspeed.initialize(args=args, model=teacher_model)
