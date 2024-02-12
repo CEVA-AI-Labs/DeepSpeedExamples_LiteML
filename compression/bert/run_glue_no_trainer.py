@@ -14,12 +14,13 @@
 # limitations under the License.
 """ Finetuning a 🤗 Transformers model for sequence classification on GLUE."""
 import sys
-sys.path.append("/home/olyas/ailabs_litespeed/")
-sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_liteml/")
-sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_shared/")
-sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_qat/")
-sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_pruning/")
-sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_quantization/")
+sys.path.append("/projects/vbu_projects/users/ronim/RetrainTeam/liteml/ailabs_liteml/")
+# sys.path.append("/home/olyas/ailabs_litespeed/")
+# sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_liteml/")
+# sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_shared/")
+# sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_qat/")
+# sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_pruning/")
+# sys.path.append("/home/olyas/ailabs_deepspeed_integration/ailabs_quantization/")
 import argparse
 import logging
 import math
@@ -62,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/text-classification/requirements.txt")
 
-from liteml.retrainer import RetrainerModel, RetrainerConfig
+from liteml.ailabs_liteml.retrainer import RetrainerModel, RetrainerConfig
 
 task_to_keys = {
     "cola": ("sentence", None),

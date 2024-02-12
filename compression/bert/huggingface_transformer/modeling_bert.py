@@ -56,7 +56,7 @@ from transformers.modeling_utils import (
 )
 from transformers.utils import logging
 from transformers.models.bert.configuration_bert import BertConfig
-from ailabs_qat.layers.liteml_layers import LiteMLMatmul
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul
 
 logger = logging.get_logger(__name__)
 
